@@ -2,6 +2,8 @@
 
 pub mod binary;
 
+use std::fmt::Debug;
+
 pub use self::binary::*;
 
 use data::{Countable, Peekable};
@@ -24,7 +26,12 @@ impl<T: Ord> Iterator for Heap<T> {
     }
 }
 
-trait HeapTest<T: Ord>: Heap<T> {
+enum Property {
+    Min,
+    Max,
+}
+
+trait HeapTest<T: Ord + Debug>: Heap<T> {
     fn validate(&self) {
         self.validate_node(0);
     }
@@ -42,7 +49,7 @@ mod test {
         vec![1, 2, 3, 4, 5, 6, 7, 8, 9]
     }
 
-    fn test_heap<T: Ord + Copy + Display, H: Heap<T> + HeapTest<T>>(mut h: H, ns: Vec<T>) {
+    fn test_heap<T: Ord + Copy + Display + Debug, H: Heap<T> + HeapTest<T>>(mut h: H, ns: Vec<T>) {
         for n in ns.iter() {
             h.insert(*n);
         }
@@ -51,6 +58,7 @@ mod test {
         let mut extracted = 0;
         let mut last_value = *ns.iter().max().unwrap();
         while let Some(v) = h.pop() {
+            println!("\npopped {}", v);
             assert!(v <= last_value);
             last_value = v;
             extracted += 1;
