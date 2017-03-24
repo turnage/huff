@@ -2,15 +2,18 @@
 
 pub mod binary;
 
+pub use self::binary::*;
+
+use data::Peekable;
+
 /// Heap holds key value pairs and always pops the element with the highest value key which was
 /// inserted first.
 ///
 /// Worst cases
 ///     Insertion O(log(n))
 ///     Pop O(log(n))
-pub trait Heap<T: Ord> {
+pub trait Heap<T: Ord>: Peekable<T> {
     fn insert(&mut self, e: T);
-    fn peek(&self) -> Option<&T>;
     fn pop(&mut self) -> Option<T>;
 }
 

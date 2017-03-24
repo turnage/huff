@@ -2,18 +2,28 @@
 
 use std::usize;
 
+use data::Peekable;
+use data::abstr::PriorityQueue;
+use data::elem::OrdElem;
 use data::heap::{Heap, HeapTest};
 
 /// BinaryHeap maintains a binary tree...
-///   - whose root is the maximum element.
+///   - whose root is the maximum element, and among elements of equal value, is the first
+///     inserted.
 ///   - which is complete.
 pub struct BinaryHeap<T: Ord> {
-    state: Vec<T>,
+    state: Vec<OrdElem<T>>,
+
+    // order decrements with each insertion to give elements of equal value a strict order.
+    order: usize,
 }
 
 impl<T: Ord> BinaryHeap<T> {
     pub fn max() -> Self {
-        BinaryHeap { state: Vec::new() }
+        BinaryHeap {
+            state: Vec::new(),
+            order: usize::MAX,
+        }
     }
 
     fn inconsistent_child(&self, i: usize) -> Option<usize> {
@@ -39,7 +49,7 @@ impl<T: Ord> BinaryHeap<T> {
 
     fn node(&self, i: usize) -> Option<&T> {
         if self.exists(i) {
-            Some(&self.state[i])
+            Some(&self.state[i].elem())
         } else {
             None
         }
@@ -72,17 +82,14 @@ impl<T: Ord> BinaryHeap<T> {
 
 impl<T: Ord> Heap<T> for BinaryHeap<T> {
     fn insert(&mut self, e: T) {
-        self.state.push(e);
+        self.state.push(OrdElem::from(e, self.order));
+        self.order -= 1;
         let mut n = self.state.len() - 1;
         while !self.is_root(n) && !self.lt_parent(n) {
             let parent = self.parent(n);
             self.state.swap(n, parent);
             n = parent;
         }
-    }
-
-    fn peek(&self) -> Option<&T> {
-        self.state.first()
     }
 
     fn pop(&mut self) -> Option<T> {
@@ -95,8 +102,24 @@ impl<T: Ord> Heap<T> for BinaryHeap<T> {
                 self.state.swap(n, c);
                 n = c
             }
-            Some(e)
+            Some(e.consume())
         }
+    }
+}
+
+impl<T: Ord> Peekable<T> for BinaryHeap<T> {
+    fn peek(&self) -> Option<&T> {
+        self.state.first().map(|e| e.elem())
+    }
+}
+
+impl<T: Ord> PriorityQueue<T> for BinaryHeap<T> {
+    fn enqueue(&mut self, e: T) {
+        self.insert(e)
+    }
+
+    fn dequeue(&mut self) -> Option<T> {
+        self.pop()
     }
 }
 

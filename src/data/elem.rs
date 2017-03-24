@@ -16,6 +16,14 @@ impl<T: Ord> OrdElem<T> {
             order: o,
         }
     }
+
+    pub fn elem(&self) -> &T {
+        &self.elem
+    }
+
+    pub fn consume(self) -> T {
+        self.elem
+    }
 }
 
 impl<T: Ord> Ord for OrdElem<T> {
