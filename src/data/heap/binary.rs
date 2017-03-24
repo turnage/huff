@@ -2,7 +2,7 @@
 
 use std::usize;
 
-use data::Peekable;
+use data::{Countable, Peekable};
 use data::abstr::PriorityQueue;
 use data::elem::OrdElem;
 use data::heap::{Heap, HeapTest};
@@ -104,6 +104,12 @@ impl<T: Ord> Heap<T> for BinaryHeap<T> {
             }
             Some(e.consume())
         }
+    }
+}
+
+impl<T: Ord> Countable for BinaryHeap<T> {
+    fn len(&self) -> usize {
+        self.state.len()
     }
 }
 

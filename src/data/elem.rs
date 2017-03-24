@@ -60,14 +60,6 @@ impl<K: Ord, V> KVPair<K, V> {
         KVPair { key: k, val: v }
     }
 
-    pub fn key(&self) -> &K {
-        &self.key
-    }
-
-    pub fn val(&self) -> &V {
-        &self.val
-    }
-
     pub fn consume(self) -> (K, V) {
         (self.key, self.val)
     }
