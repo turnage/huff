@@ -2,9 +2,6 @@
 
 pub mod binary;
 
-use std::cmp::Ordering;
-use std::fmt::Display;
-
 /// Heap holds key value pairs and always pops the element with the highest value key which was
 /// inserted first.
 ///
@@ -35,6 +32,7 @@ trait HeapTest<T: Ord>: Heap<T> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::fmt::Display;
 
     /// input returns a set of unique elements.
     fn input() -> Vec<usize> {
