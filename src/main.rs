@@ -1,4 +1,4 @@
-mod data;
+pub mod data;
 
 use data::Countable;
 use data::elem::KVPair;
@@ -29,7 +29,7 @@ impl Node {
             codes.push((String::from(self.val.as_str()), String::from(path.as_str())))
         }
         if let Some(ref lc) = self.left {
-            codes.append(&mut lc.codes(format!("{})", &path)));
+            codes.append(&mut lc.codes(format!("{}0", &path)));
         }
         if let Some(ref rc) = self.right {
             codes.append(&mut rc.codes(format!("{}1", &path)));
@@ -39,12 +39,12 @@ impl Node {
 }
 
 fn main() {
-    let pairs = vec![KVPair::from(5, Node::from(String::from("e"))),
-                     KVPair::from(4, Node::from(String::from("d"))),
+    let pairs = vec![KVPair::from(1, Node::from(String::from("e"))),
+                     KVPair::from(2, Node::from(String::from("d"))),
                      KVPair::from(3, Node::from(String::from("c"))),
-                     KVPair::from(2, Node::from(String::from("b"))),
-                     KVPair::from(1, Node::from(String::from("a")))];
-    let mut pq = BinaryHeap::max();
+                     KVPair::from(4, Node::from(String::from("b"))),
+                     KVPair::from(5, Node::from(String::from("a")))];
+    let mut pq = BinaryHeap::min();
 
     for p in pairs {
         pq.enqueue(p)
