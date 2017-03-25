@@ -1,5 +1,7 @@
 pub mod data;
 
+use std::io::Read;
+
 use data::Countable;
 use data::elem::KVPair;
 use data::heap::BinaryHeap;
@@ -39,29 +41,39 @@ impl Node {
 }
 
 fn main() {
-    let pairs = vec![KVPair::from(1, Node::from(String::from("e"))),
-                     KVPair::from(2, Node::from(String::from("d"))),
-                     KVPair::from(3, Node::from(String::from("c"))),
-                     KVPair::from(4, Node::from(String::from("b"))),
-                     KVPair::from(5, Node::from(String::from("a")))];
-    let mut pq = BinaryHeap::min();
+    let mut buffer = String::new();
+    match std::io::stdin().read_to_string(&mut buffer) {
+        Err(e) => println!("Failed to read frequencies from stdin: {}", e),
+        Ok(_) => {
+            let mut pairs = Vec::new();
+            for line in buffer.lines() {
+                let mut terms = line.split_whitespace();
+                let freq = terms.next().unwrap().parse::<usize>().unwrap();
+                let elem = terms.next().unwrap();
+                pairs.push(KVPair::from(freq, Node::from(String::from(elem))));
+            }
+            let mut pq = BinaryHeap::min();
 
-    for p in pairs {
-        pq.enqueue(p)
-    }
+            for p in pairs {
+                pq.enqueue(p)
+            }
 
-    while pq.len() > 1 {
-        let (pkey, pval) = pq.dequeue().unwrap().consume();
-        let (qkey, qval) = pq.dequeue().unwrap().consume();
-        let r = Node {
-            val: String::from(EMPTY),
-            left: Some(Box::new(pval)),
-            right: Some(Box::new(qval)),
-        };
-        pq.enqueue(KVPair::from(pkey + qkey, r));
-    }
+            while pq.len() > 1 {
+                let (pkey, pval) = pq.dequeue().unwrap().consume();
+                let (qkey, qval) = pq.dequeue().unwrap().consume();
+                let r = Node {
+                    val: String::from(EMPTY),
+                    left: Some(Box::new(pval)),
+                    right: Some(Box::new(qval)),
+                };
+                pq.enqueue(KVPair::from(pkey + qkey, r));
+            }
 
-    let (_, root) = pq.dequeue().unwrap().consume();
+            let (_, root) = pq.dequeue().unwrap().consume();
 
-    println!("{:?}", root.codes(String::from("")));
+            for (elem, code) in root.codes(String::from("")) {
+                println!("{}\t{}", elem, code);
+            }
+        }
+    };
 }
