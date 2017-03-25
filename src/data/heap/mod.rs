@@ -2,8 +2,6 @@
 
 pub mod binary;
 
-use std::fmt::Debug;
-
 pub use self::binary::*;
 
 use data::{Countable, Peekable};
@@ -31,44 +29,39 @@ enum Property {
     Max,
 }
 
-trait HeapTest<T: Ord + Debug>: Heap<T> {
-    fn validate(&self) {
-        self.validate_node(0);
-    }
-
-    fn validate_node(&self, n: usize);
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use std::fmt::Display;
 
-    /// input returns a set of unique elements.
-    fn input() -> Vec<usize> {
-        vec![1, 2, 3, 4, 5, 6, 7, 8, 9]
-    }
-
-    fn test_heap<T: Ord + Copy + Display + Debug, H: Heap<T> + HeapTest<T>>(mut h: H, ns: Vec<T>) {
+    fn test_heap<T, H, F>(mut h: H, ns: Vec<T>, verify: F)
+        where T: Ord + Copy + Display + Debug,
+              H: Heap<T>,
+              F: Fn(T, T) -> bool
+    {
         for n in ns.iter() {
             h.insert(*n);
         }
-        h.validate();
 
         let mut extracted = 0;
-        let mut last_value = *ns.iter().max().unwrap();
+        let mut last_value = None;
         while let Some(v) = h.pop() {
-            println!("\npopped {}", v);
-            assert!(v <= last_value);
-            last_value = v;
+            if let Some(prev) = last_value {
+                assert!(verify(v, prev));
+            }
+            last_value = Some(v);
             extracted += 1;
-            h.validate();
         }
         assert_eq!(extracted, ns.len());
     }
 
     #[test]
     fn binary_heap() {
-        test_heap(binary::BinaryHeap::max(), input());
+        test_heap(binary::BinaryHeap::max(),
+                  vec![1, 2, 3, 4, 5],
+                  |cur, prev| cur <= prev);
+        test_heap(binary::BinaryHeap::min(),
+                  vec![1, 2, 3, 3, 4, 5],
+                  |cur, prev| cur >= prev);
     }
 }

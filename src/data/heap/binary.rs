@@ -1,13 +1,11 @@
 //! binary provides a Binary Heap.
 
 use std::usize;
-use std::cmp;
-use std::fmt::Debug;
 
 use data::{Countable, Peekable};
 use data::abstr::PriorityQueue;
 use data::elem::OrdElem;
-use data::heap::{Heap, Property, HeapTest};
+use data::heap::{Heap, Property};
 
 /// BinaryHeap maintains a binary tree...
 ///   - whose root is the maximum element, and among elements of equal value, is the first
@@ -15,10 +13,7 @@ use data::heap::{Heap, Property, HeapTest};
 ///   - which is complete.
 pub struct BinaryHeap<T: Ord> {
     state: Vec<OrdElem<T>>,
-
-    // order decrements with each insertion to give elements of equal value a strict order.
-    order: usize,
-
+    order: Box<Iterator<Item = usize>>,
     prop: Property,
 }
 
@@ -26,7 +21,7 @@ impl<T: Ord> BinaryHeap<T> {
     pub fn max() -> Self {
         BinaryHeap {
             state: Vec::new(),
-            order: usize::MAX,
+            order: Box::new((1..usize::MAX).rev()),
             prop: Property::Max,
         }
     }
@@ -34,92 +29,67 @@ impl<T: Ord> BinaryHeap<T> {
     pub fn min() -> Self {
         BinaryHeap {
             state: Vec::new(),
-            order: usize::MIN,
+            order: Box::new((1..)),
             prop: Property::Min,
         }
     }
 
-    fn inconsistent_child(&self, i: usize) -> Option<usize> {
-        if let Some(c) = self.eager_child(i) {
-            if !self.valid_parent(c) { Some(c) } else { None }
-        } else {
-            None
-        }
-    }
-
-    fn eager_child(&self, i: usize) -> Option<usize> {
-        self.eager_of(self.left(i), self.right(i))
-    }
-
-    fn eager_of(&self, a: Option<usize>, b: Option<usize>) -> Option<usize> {
-        let akey = a.map(|v| self.key(v));
-        let bkey = b.map(|v| self.key(v));
-        let keymatch = |k| if k == akey { a } else { b };
-        match self.prop {
-            Property::Min => keymatch(cmp::min(akey, bkey)),
-            Property::Max => keymatch(cmp::max(akey, bkey)),
-        }
-    }
-
-    fn valid_parent(&self, i: usize) -> bool {
-        if let Some(p) = self.parent(i) {
-            match self.prop {
-                Property::Min => self.state[i] >= self.state[p],
-                Property::Max => self.state[i] <= self.state[p],
+    fn invalid_child(&self, n: usize) -> Option<usize> {
+        let invalid_child = |i| match i {
+            i if i < self.state.len() => {
+                match self.invalid_parent(i) {
+                    Some(_) => Some(i),
+                    None => None,
+                }
             }
-        } else {
-            true
+            _ => None,
+        };
+        let left = invalid_child(n * 2 + 1);
+        let right = invalid_child(n * 2 + 2);
+        match (left, right) {
+            (None, None) => None,
+            (None, Some(r)) => Some(r),
+            (Some(l), None) => Some(l),
+            (Some(l), Some(r)) => {
+                match self.valid(l, r) {
+                    true => Some(l),
+                    false => Some(r),
+                }
+            }
+
         }
     }
 
-    fn is_root(&self, i: usize) -> bool {
-        i == 0
-    }
-
-    fn parent(&self, i: usize) -> Option<usize> {
-        if self.is_root(i) {
-            None
-        } else if i % 2 == 0 {
-            self.elem((i - 2) / 2)
-        } else {
-            self.elem((i - 1) / 2)
+    fn invalid_parent(&self, n: usize) -> Option<usize> {
+        match n {
+            n if n > 0 => {
+                let parent = (n - 1) / 2;
+                if self.valid(parent, n) {
+                    None
+                } else {
+                    Some(parent)
+                }
+            }
+            _ => None,
         }
     }
 
-    fn left(&self, i: usize) -> Option<usize> {
-        self.elem(i * 2 + 1)
-    }
-
-    fn right(&self, i: usize) -> Option<usize> {
-        self.elem(i * 2 + 2)
-    }
-
-    fn elem(&self, i: usize) -> Option<usize> {
-        if self.exists(i) { Some(i) } else { None }
-    }
-
-    fn key(&self, i: usize) -> Option<&T> {
-        if let Some(i) = self.elem(i) {
-            Some(self.state[i].elem())
-        } else {
-            None
+    fn valid(&self, p: usize, c: usize) -> bool {
+        match self.prop {
+            Property::Min => self.state[p] < self.state[c],
+            Property::Max => self.state[p] > self.state[c],
         }
-    }
-
-    fn exists(&self, i: usize) -> bool {
-        i < self.state.len()
     }
 }
 
 impl<T: Ord> Heap<T> for BinaryHeap<T> {
     fn insert(&mut self, e: T) {
-        self.state.push(OrdElem::from(e, self.order));
-        self.order -= 1;
+        let order = self.order.next().unwrap();
+        self.state.push(OrdElem::from(e, order));
         let mut n = self.state.len() - 1;
-        while !self.is_root(n) && !self.valid_parent(n) {
-            let parent = self.parent(n).unwrap();
-            self.state.swap(n, parent);
-            n = parent;
+        while let Some(p) = self.invalid_parent(n) {
+            self.state.swap(n, p);
+            n = p;
         }
     }
 
@@ -129,7 +99,7 @@ impl<T: Ord> Heap<T> for BinaryHeap<T> {
         } else {
             let mut n = 0;
             let e = self.state.swap_remove(n);
-            while let Some(c) = self.inconsistent_child(n) {
+            while let Some(c) = self.invalid_child(n) {
                 self.state.swap(n, c);
                 n = c
             }
@@ -157,22 +127,5 @@ impl<T: Ord> PriorityQueue<T> for BinaryHeap<T> {
 
     fn dequeue(&mut self) -> Option<T> {
         self.pop()
-    }
-}
-
-impl<T: Ord + Debug> HeapTest<T> for BinaryHeap<T> {
-    fn validate_node(&self, n: usize) {
-        if !self.exists(n) {
-            return;
-        }
-
-        assert_eq!(self.inconsistent_child(n), None);
-        assert!(self.valid_parent(n));
-
-        let children = &[self.left(n), self.right(n)];
-        let mut citer = children.iter().filter(|c| c.is_some()).map(|c| c.unwrap());
-        while let Some(c) = citer.next() {
-            self.validate_node(c);
-        }
     }
 }
